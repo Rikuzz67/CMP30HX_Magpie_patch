@@ -96,3 +96,12 @@ Magpie-30HX-Compat/
 ├── Install-30HX.cmd           # One-click installation entry
 ├── Check-30HX.cmd             # One-click verification entry
 └── Restore-30HX.cmd           # One-click uninstall and restore entry
+
+---
+
+## 6. Acknowledgments
+
+This project stands on the shoulders of giants. Special thanks to:
+* **[Blinue/Magpie](https://github.com/Blinue/Magpie)**: For creating the incredible Magpie scaling utility.
+* **[SAOG0721/Magpie](https://github.com/SAOG0721/Magpie)**: For maintaining the experimental community fork and integrating the D3D12 DLSSNR pipeline.
+* **DLSS5 Modding Community**: For the original models and technical inspiration that made this compatibility patch possible.

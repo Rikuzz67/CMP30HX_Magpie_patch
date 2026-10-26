@@ -1,0 +1,30 @@
+[
+  {
+    "version": "0.6.10",
+    "originalHash": "72e67f836b7c74d9f37eea27ae3c9a6b45935eaa3a1a2af917e8448d9ace5ef2",
+    "patchedHash": "02e11444ab6c290f3c823a510089307402e64fad44971cdda568076364a0ae33",
+    "helperHash": "b6d1013ef23eb9ce3378b65f339152e532c8b5cf84aca7d865dfe74bddcfd93c",
+    "callRva": 3796199,
+    "loadIat": 4039432,
+    "procIat": 4039440,
+    "commit": "0b768fd584aa6da18c228fbac16f0953c26006e7",
+    "status": "application-tested-with-310.8.2-community",
+    "releaseUrl": "https://github.com/SAOG0721/Magpie/releases/tag/v0.6.10-experimental",
+    "downloadUrl": "https://github.com/SAOG0721/Magpie/releases/download/v0.6.10-experimental/Magpie-Experimental-x64.zip",
+    "optionsUrl": "https://github.com/SAOG0721/Magpie/releases/download/v0.6.10-experimental/DLSSNR-DLL-Options.zip"
+  },
+  {
+    "version": "0.6.11",
+    "originalHash": "30ffaf64e7e583e43f2953694b25523fe2d5318622540872be99f74dc57a29b2",
+    "patchedHash": "9b49dc3453f0d553a4430ccb6d2ae4fd46a12b67d618a6a2c5463278c8946f5e",
+    "helperHash": "b6d1013ef23eb9ce3378b65f339152e532c8b5cf84aca7d865dfe74bddcfd93c",
+    "callRva": 3836615,
+    "loadIat": 4084496,
+    "procIat": 4084504,
+    "commit": "4fc74a196993c883ce2f01e96e8ed8d81f1490e6",
+    "status": "experimental-standalone-tested-with-310.9.16-community",
+    "releaseUrl": "https://github.com/SAOG0721/Magpie/releases/tag/v0.6.11-experimental",
+    "downloadUrl": "https://github.com/SAOG0721/Magpie/releases/download/v0.6.11-experimental/Magpie-Experimental-x64.zip",
+    "optionsUrl": "https://github.com/SAOG0721/Magpie/releases/download/v0.6.11-experimental/DLSSNR-DLL-Options.zip"
+  }
+]

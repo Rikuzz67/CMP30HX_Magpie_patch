@@ -1,0 +1,57 @@
+[
+  {
+    "path": ".gitignore",
+    "size": 245,
+    "sha256": "5bf6c8ce66c9b1cbe77e3ebcd39af1041925a009585603198b4ef195d2d3b26f"
+  },
+  {
+    "path": "30HXCoreLoader.dll",
+    "size": 237056,
+    "sha256": "b6d1013ef23eb9ce3378b65f339152e532c8b5cf84aca7d865dfe74bddcfd93c"
+  },
+  {
+    "path": "Check-30HX.cmd",
+    "size": 157,
+    "sha256": "0e9266ef3e812e7b8922d6306e1ca8cfe278e608042794dd3b3c4cf0c54e6b13"
+  },
+  {
+    "path": "Install-30HX.cmd",
+    "size": 159,
+    "sha256": "e9e74b8605b2c025f3b01af158922a8d892ce9ef3853fc2136cbe6cabffef1ff"
+  },
+  {
+    "path": "Install.ps1",
+    "size": 13836,
+    "sha256": "c8c71daeac02e21b8bf2b25d65ae3f5170a3ac2aa4fa0a2fd064ebca48e00b2c"
+  },
+  {
+    "path": "README.md",
+    "size": 9114,
+    "sha256": "1747c63761b0f4d128c78373060177d4d4921964c8c86ba87af4c8cb72d88d7c"
+  },
+  {
+    "path": "Restore-30HX.cmd",
+    "size": 159,
+    "sha256": "46407b5db3268cb971d67d0066d60c87efa0d66fd376dfa57acf013cd5411ce9"
+  },
+  {
+    "path": "src/PatchEngine.cs",
+    "size": 5849,
+    "sha256": "2c8179a7639f2b233d5b26442b8fa0d0f0b411e4a683ca32f78c21d0dd37980c"
+  },
+  {
+    "path": "src/pinned_loader.cpp",
+    "size": 2707,
+    "sha256": "c7261064c83b11356acad5af6cbdef629380546d225df690ae7daad03106a9b7"
+  },
+  {
+    "path": "VALIDATION.json",
+    "size": 1717,
+    "sha256": "f87dd38f531d7e35e083fb9b4d053e893845190d787eff8b465f1388231d68fb"
+  },
+  {
+    "path": "versions.json",
+    "size": 1674,
+    "sha256": "31eaf7fe5f4ff41b2e213f1699068de5db727ceb07f12e88a52d7ec8ebc157da"
+  }
+]

@@ -1,0 +1,48 @@
+{
+  "tests": [
+    {
+      "version": "0.6.10",
+      "install_check_restore": true,
+      "reinstall_after_restore": true,
+      "duplicate_install_refused": true,
+      "tampered_file_check_and_restore_refused": true,
+      "config_preserved": true,
+      "executable_hash_verified": true
+    },
+    {
+      "version": "0.6.11",
+      "install_check_restore": true,
+      "reinstall_after_restore": true,
+      "duplicate_install_refused": true,
+      "tampered_file_check_and_restore_refused": true,
+      "config_preserved": true,
+      "executable_hash_verified": true
+    }
+  ],
+  "unsupported_executable_no_writes": true,
+  "wrong_core_no_writes": true,
+  "missing_model_no_target_changes": true,
+  "write_failure_preserved_original_files": true,
+  "failed_install_restore_recovery": true,
+  "windows_powershell": "5.1",
+  "no_python_required_for_users": true,
+  "automatic_installed_driver_core_discovery_tested": true,
+  "newly_compiled_helper_rejection_tests_passed": true,
+  "latest_standalone": {
+    "version": "0.6.11",
+    "community_model": "310.9.16.0",
+    "patched_executable_entry_executed": true,
+    "core_init": "0x1",
+    "model_init": "0x1",
+    "feature_creation": "0x1",
+    "evaluate": "0x1",
+    "gpu_fence_completed": true,
+    "device_removed_reason": 0,
+    "half_values": 262144,
+    "changed_half_values": 194761,
+    "nonfinite_values": 0,
+    "full_application_ui_and_continuous_pipeline_tested": false
+  },
+  "file_picker_ui_automated": false,
+  "privacy": "No raw user logs, personal configuration, absolute machine paths, runtime device identifiers or third-party binaries included. Only the self-compiled helper DLL is bundled."
+}

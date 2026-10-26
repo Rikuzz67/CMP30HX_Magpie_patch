@@ -1,0 +1,19 @@
+inputs/
+logs/
+cache/
+config/
+backups/
+Magpie*/
+.30hx-compat-*/
+*.log
+*.dmp
+*.exe
+*.original
+*.rgba16f
+*.bak
+__pycache__/
+.env*
+state.json
+# Intentionally distribute only our compiled loader; do not add model/core DLLs.
+*.dll
+!30HXCoreLoader.dll

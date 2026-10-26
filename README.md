@@ -96,6 +96,7 @@ Magpie-30HX-Compat/
 ├── Install-30HX.cmd           # One-click installation entry
 ├── Check-30HX.cmd             # One-click verification entry
 └── Restore-30HX.cmd           # One-click uninstall and restore entry
+```
 
 ---
 

@@ -1,5 +1,17 @@
 # CMP 30HX · Magpie Community Edition DLSSNR One-Click Compatibility Patch
 
+**v2 update:** The installer now applies the 30HX compatibility patch and both performance changes in one operation on the exact **SAOG0721/Magpie 0.6.11 community release**. Version 0.6.10 retains its original compatibility patch. This is a patch package, not a replacement Magpie distribution. Use the existing Install / Check / Restore CMD files; no Python is needed.
+
+Existing v1 users: exit Magpie, run this package's **Restore-30HX.cmd**, then **Install-30HX.cmd**. The old backup is retained as an archive. The earlier standalone V2 application folder has a separate two-layer backup layout; use its own restoration tools or apply this package to a fresh community release directory.
+
+The 0.6.11 optimization requires the community **310.9.16** model. It adds a precomputed-weight fast path for exact 4:1 downsampling and sets maximum present queue depth to 1 on the affected swap-chain path. The measured downsample saving is about **0.009 ms**, not a 6.5% improvement to the whole pipeline. Full-size input does not use the downsample fast path. Model inference remains the main cost; 1080p 60 FPS, full-load end-to-end latency, and full DLSS5 equivalence have **not** been demonstrated. Styles, intensity, input scale, FPS settings and model weights are unchanged. The present queue change also affects other effects using the same path; the separate DirectComposition path is unaffected.
+
+The EXE is patched at exact, hash-locked locations; this package does not rebuild the entire Magpie application. Auditable C# code, the embedded shader, and an upstream source diff are included under `src/`.
+
+The source diff targets upstream commit `4fc74a196993c883ce2f01e96e8ed8d81f1490e6`. The downsample tests found at most one 8-bit channel level of difference between the original and optimized filter. These filter results do not establish pixel-identical neural output. At 480×270, the unchanged model still took about 80 ms per inference in the standalone test. This update does not claim to fix slow initialization.
+
+The unified installer was tested on isolated copies under Windows PowerShell 5.1 for installation, integrity checks, full restoration, reinstallation, duplicate-install rejection, tampering rejection, configuration preservation, and migration from the compatibility-only patch. See `VALIDATION-v2.json`; the full application pipeline was not rerun as part of installer validation.
+
 This project provides an automated compatibility patch and dedicated loader for the **NVIDIA CMP 30HX** (TU116 architecture, lacking physical Tensor Cores), enabling it to successfully initialize and run the DLSSNR (Feature 18) image filter within the [SAOG0721/Magpie](https://github.com/SAOG0721/Magpie) community edition.
 
 > **Important Note**: This project exclusively targets the **DLSSNR / Feature 18 image filter path** within this software package. Existing verification does not signify that the full DLSS5 feature set (such as independent super resolution, ray reconstruction, or all frame generation capabilities) has been implemented on the CMP 30HX.
@@ -61,6 +73,7 @@ The patch package includes fully automated scripts, requiring **no Python, Visua
    * Generate a dedicated compatible core copy locally in the application folder.
    * Inject the `.hxload` section and deploy `30HXCoreLoader.dll`.
    * Verify the community DLSSNR model fingerprint.
+   * On 0.6.11, integrate both performance changes into the same EXE and backup transaction. `PERFORMANCE_OK` confirms the optimized output fingerprint.
 4. A terminal prompt showing **`INSTALL_OK`** indicates a successful installation.
 
 ### Step 3: Recommended Configuration
@@ -77,7 +90,7 @@ The patch package includes fully automated scripts, requiring **no Python, Visua
 ## 4. Maintenance & Verification Tools
 
 * **Integrity Check (`Check-30HX.cmd`)**: Double-click to run and select the target `Magpie.exe`; the script will compare the SHA256 of the main program, local core, loader, and model, and verify the integrity of the backup.
-* **One-Click Restore (`Restore-30HX.cmd`)**: Run this script after exiting Magpie; it will automatically delete the newly added `30HXCoreLoader.dll` and local core, and completely restore the unpatched `Magpie.exe` from the original backup directory (`.30hx-compat-backup-v1`).
+* **One-Click Restore (`Restore-30HX.cmd`)**: Run this script after exiting Magpie; it restores original files and removes only files that this installation added. The original `Magpie.exe` is recovered from `.30hx-compat-backup-v1`, undoing both compatibility and performance changes. Existing files and personal settings are preserved; backup files are retained in an archive directory.
 
 ---
 
@@ -89,6 +102,10 @@ The repository provides the complete source code for the injection engine and lo
 Magpie-30HX-Compat/
 ├── src/
 │   ├── PatchEngine.cs         # C# PE injection, section expansion, and hash patching engine
+│   ├── PerformancePatch.cs    # Hash-locked 0.6.11 performance changes
+│   ├── optimized-downsample.hlsl # Exact embedded shader resource
+│   ├── 30hx-performance.patch # Source diff against the upstream 0.6.11 commit
+│   ├── LICENSE-Magpie.txt     # Upstream license for the source diff
 │   └── pinned_loader.cpp      # Fixed hash core loading proxy based on Windows BCrypt
 ├── Install.ps1                # Automated installation and retrieval logic
 ├── versions.json              # Fingerprint manifest for supported EXEs, cores, and models
@@ -100,9 +117,77 @@ Magpie-30HX-Compat/
 
 ---
 
-## 6. Acknowledgments
+## 6. Contributors and Acknowledgments
+
+### Contributors
+
+* **[Rikuzz67](https://github.com/Rikuzz67)**: Project maintainer, CMP 30HX testing and release coordination.
+* **OpenAI Codex (AI coding assistant)**: Assisted with performance code changes, unified installer integration, validation tooling and documentation.
+* **Anthropic Claude (AI coding assistant)**: Assisted with project development.
+
+### Acknowledgments
 
 This project stands on the shoulders of giants. Special thanks to:
 * **[Blinue/Magpie](https://github.com/Blinue/Magpie)**: For creating the incredible Magpie scaling utility.
 * **[SAOG0721/Magpie](https://github.com/SAOG0721/Magpie)**: For maintaining the experimental community fork and integrating the D3D12 DLSSNR pipeline.
 * **DLSS5 Modding Community**: For the original models and technical inspiration that made this compatibility patch possible.
+
+---
+
+## 7. Publishing This Patch
+
+The existing repository is [Rikuzz67/CMP30HX_Magpie_patch](https://github.com/Rikuzz67/CMP30HX_Magpie_patch). Publish the patch source and a small patch-only release archive; users download the corresponding community Magpie release and NVIDIA dependencies separately.
+
+### Update the source repository
+
+Open this local repository in GitHub Desktop and review Changes. Include the updated installer, version fingerprints, source code, shader, tests, checksum manifest, build tool and `.gitattributes`. Keep the `src/`, `tests/` and `tools/` directory structure. The exact shader bytes are fingerprinted; `.gitattributes` prevents Windows Git from changing them through automatic line-ending conversion.
+
+Commit with a message such as `Integrate 0.6.11 performance changes into the 30HX installer`, then click **Push origin**. The existing self-compiled `30HXCoreLoader.dll` is unchanged and does not need rebuilding. Python is only needed for the maintainer's release builder and integration tests, not for users installing the patch.
+
+Alternatively, run these commands in PowerShell from the local repository directory:
+
+```powershell
+git add -- .gitattributes .gitignore Install.ps1 README.md versions.json CHECKSUMS.json VALIDATION.json VALIDATION-v2.json src tests tools
+git commit -m "Integrate v2 performance optimizations into the 30HX community patch"
+git push origin main
+```
+
+The `dist/` release attachments are excluded from source commits. The AI assistant entries above credit their assistance in this README; GitHub's automatic Contributors graph is based on account-linked commits.
+
+### Create a GitHub release
+
+1. Open **Releases → Draft a new release** in the repository.
+2. Choose an unused tag, such as `v2-0.6.10-0.6.11`, targeting the commit just pushed.
+3. Use a title such as `30HX community patch v2 — integrated 0.6.11 optimizations`.
+4. Attach `Magpie-30HX-Compat-v2-community-0.6.10-0.6.11.zip` and its `.zip.sha256` file.
+5. Review the release description below and publish when ready.
+
+Do not include the full Magpie application, NVIDIA model/core DLLs, personal configuration, caches or private logs. The archive contains only an explicit list of patch files, including this project's self-compiled loader. `CHECKSUMS.json` records the packaged file hashes.
+
+Suggested release description:
+
+```text
+Supports only the exact SHA256-locked SAOG0721/Magpie community releases 0.6.10 and 0.6.11. This does not support the official Blinue build or unknown recompilations.
+
+0.6.11: One installer now combines 30HX compatibility changes, exact 4:1 Lanczos2 downsample optimization and maximum present queue depth 1. Requires the community 310.9.16 model and the previously validated 616.92 NGX core.
+0.6.10: Existing compatibility support is retained; the two performance changes are not applied.
+
+New users: Extract the matching community Magpie release and run Install-30HX.cmd from this patch.
+Existing compatibility-patch users: Exit Magpie, run this package's Restore-30HX.cmd, then Install-30HX.cmd.
+Use the matching Check/Restore CMD files for maintenance. No Python required. Personal configuration, style and intensity settings are unchanged.
+
+The measured 1080p-to-480x270 downsample saving is about 0.009 ms, approximately 6.5% of that filter stage, not the entire frame. Full-size input does not use this fast path. The queue change limits waiting on the affected presentation path; full-load end-to-end latency has not been quantified.
+The neural model remains the main bottleneck. This update does not achieve 1080p 60 FPS with neural processing of every frame or claim full DLSS5 equivalence. All three existing styles and model weights are unchanged.
+
+Install/check/restore, reinstall, and compatibility-only migration tests passed on isolated copies under Windows PowerShell 5.1. Installer validation did not rerun the full continuous application pipeline. See README.md and VALIDATION-v2.json.
+```
+
+### Rebuild the release archive
+
+From the repository directory, run:
+
+```powershell
+python tools/build_release.py --output-dir dist
+```
+
+The tool updates `CHECKSUMS.json`, then creates the ZIP and SHA256 attachment from an explicit file allowlist. It does not access the network or collect unrelated files. Choose an empty output directory for each build; existing release attachments are not overwritten.

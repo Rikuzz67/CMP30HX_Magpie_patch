@@ -1,0 +1,32 @@
+{
+  "tests": [
+    {
+      "version": "0.6.10",
+      "install_check_restore": true,
+      "final_executable_hash": "02e11444ab6c290f3c823a510089307402e64fad44971cdda568076364a0ae33",
+      "duplicate_install_no_writes": true,
+      "tampered_check_restore_no_writes": true,
+      "reinstall_after_restore": true,
+      "config_preserved": true
+    },
+    {
+      "version": "0.6.11",
+      "install_check_restore": true,
+      "final_executable_hash": "949a60edbd59099b035cb6b61ca4eb0d31471ce6a448e46c6a379bb03873b3d6",
+      "duplicate_install_no_writes": true,
+      "tampered_check_restore_no_writes": true,
+      "reinstall_after_restore": true,
+      "config_preserved": true
+    },
+    {
+      "v1_restore_then_v2_install": true
+    }
+  ],
+  "unknown_executable_no_writes": true,
+  "modified_shader_no_writes": true,
+  "missing_backup_check_rejected": true,
+  "separate_v2_layout_rejected_without_writes": true,
+  "shell": "Windows PowerShell 5.1",
+  "application_launched": false,
+  "full_pipeline_retested": false
+}

@@ -13,6 +13,8 @@ Magpie*/
 *.bak
 __pycache__/
 .env*
+dist/
+.test-work/
 state.json
 # Intentionally distribute only our compiled loader; do not add model/core DLLs.
 *.dll

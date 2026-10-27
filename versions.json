@@ -17,6 +17,8 @@
     "version": "0.6.11",
     "originalHash": "30ffaf64e7e583e43f2953694b25523fe2d5318622540872be99f74dc57a29b2",
     "patchedHash": "9b49dc3453f0d553a4430ccb6d2ae4fd46a12b67d618a6a2c5463278c8946f5e",
+    "optimizedHash": "949a60edbd59099b035cb6b61ca4eb0d31471ce6a448e46c6a379bb03873b3d6",
+    "performanceModelHash": "a8a237a967469c455a84654932b513ab656fbaa1e0c44504b1e1bf0890f902b8",
     "helperHash": "b6d1013ef23eb9ce3378b65f339152e532c8b5cf84aca7d865dfe74bddcfd93c",
     "callRva": 3836615,
     "loadIat": 4084496,

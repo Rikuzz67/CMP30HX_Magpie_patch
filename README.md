@@ -121,8 +121,7 @@ Magpie-30HX-Compat/
 
 ### Contributors
 
-* **[Rikuzz67](https://github.com/Rikuzz67)**: Project maintainer, CMP 30HX testing and release coordination.
-* **OpenAI Codex (AI coding assistant)**: Assisted with performance code changes, unified installer integration, validation tooling and documentation.
+* **[Rikuzz67](https://github.com/Rikuzz67)**: Assisted with performance code changes, unified installer integration, validation tooling and documentation.
 * **Anthropic Claude (AI coding assistant)**: Assisted with project development.
 
 ### Acknowledgments

@@ -1,0 +1,6 @@
+* text eol=lf
+*.cmd text eol=crlf
+*.dll binary
+*.zip binary
+# This resource is fingerprinted as exact bytes by PerformancePatch.cs.
+src/optimized-downsample.hlsl -text

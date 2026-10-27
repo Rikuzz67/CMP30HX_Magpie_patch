@@ -1,0 +1,183 @@
+--- a/src/Magpie.Core/DLSSNRFilter.cpp
++++ b/src/Magpie.Core/DLSSNRFilter.cpp
+@@ -204,9 +204,28 @@
+     return abs(x) < 2.0 ? Sinc(x) * Sinc(x * 0.5) : 0.0;
+ }
+ 
++static const float Lanczos2QuarterWeights[16] = {
++    -0.0010653827, -0.0097517015, -0.0203839875, -0.0148778908,
++     0.0245940645,  0.0986584995,  0.1831152829,  0.2397111157,
++     0.2397111157,  0.1831152829,  0.0986584995,  0.0245940645,
++    -0.0148778908, -0.0203839875, -0.0097517015, -0.0010653827
++};
++
+ [numthreads(8, 8, 1)]
+ void DownsampleColorVertical(uint3 tid : SV_DispatchThreadID) {
+     if (tid.x >= SourceExtent.x || tid.y >= TargetExtent.y) return;
++    if (SourceExtent.y == TargetExtent.y * 4) {
++        int first = int(tid.y * 4) - 6;
++        float4 total = 0.0;
++        [unroll]
++        for (int i = 0; i < 16; ++i) {
++            total += InputColor.Load(int3(tid.x,
++                clamp(first + i, 0, int(SourceExtent.y) - 1), 0)) *
++                Lanczos2QuarterWeights[i];
++        }
++        OutputColor[tid.xy] = total;
++        return;
++    }
+     float scale = float(TargetExtent.y) / float(SourceExtent.y);
+     float position = (float(tid.y) + 0.5) / scale - 0.5;
+     float support = 2.0 / scale;
+@@ -228,6 +247,18 @@
+ [numthreads(8, 8, 1)]
+ void DownsampleColorHorizontal(uint3 tid : SV_DispatchThreadID) {
+     if (any(tid.xy >= TargetExtent)) return;
++    if (SourceExtent.x == TargetExtent.x * 4) {
++        int first = int(tid.x * 4) - 6;
++        float4 total = 0.0;
++        [unroll]
++        for (int i = 0; i < 16; ++i) {
++            total += InputColor.Load(int3(
++                clamp(first + i, 0, int(SourceExtent.x) - 1), tid.y, 0)) *
++                Lanczos2QuarterWeights[i];
++        }
++        OutputColor[tid.xy] = total;
++        return;
++    }
+     float scale = float(TargetExtent.x) / float(SourceExtent.x);
+     float position = (float(tid.x) + 0.5) / scale - 0.5;
+     float support = 2.0 / scale;
+--- a/src/Magpie.Core/AdaptivePresenter.cpp
++++ b/src/Magpie.Core/AdaptivePresenter.cpp
+@@ -92,15 +92,10 @@
+ 		}
+ 	}
+ 
+-	const auto& options = ScalingWindow::Get().Options();
+-	uint32_t maximumFrameLatency = options.isFrontEdgeSyncEnabled && !options.IsBenchmarkMode()
+-		? 1u : bufferCount - 1;
+-	for (const EffectOption& effect : ScalingWindow::Get().Options().effects) {
+-		if (effect.name == "DLSSFG\\DLSS_FrameGeneration") {
+-			maximumFrameLatency = 1;
+-			break;
+-		}
+-	}
++	// Keep one pending Present for every pacing mode. A large swap-chain
++	// capacity still serves cursor/UI refresh, but must not become a 3/7-frame
++	// driver queue when a neural effect saturates the rendering GPU.
++	constexpr uint32_t maximumFrameLatency = 1u;
+ 	// Bound driver-side queuing when the application already paces submissions.
+ 	hr = _dxgiSwapChain->SetMaximumFrameLatency(maximumFrameLatency);
+ 	if (FAILED(hr)) {
+--- a/tests/DLSSNRPipelineTests.cpp
++++ b/tests/DLSSNRPipelineTests.cpp
+@@ -13,6 +13,7 @@
+ #include <iostream>
+ #include <cassert>
+ #include <source_location>
++#include <numbers>
+ #include "DLSSNRColorReference.h"
+ 
+ using namespace Magpie;
+@@ -227,7 +228,7 @@
+ 	}
+ 	// Execute the production resampling/reconstruction helpers without NGX at
+ 	// tiny and odd sizes, including signed and clipped residuals and alpha.
+-	for (const auto extent : {FrameGuidanceExtent{1,1}, FrameGuidanceExtent{17,11}, FrameGuidanceExtent{513,289}}) {
++	for (const auto extent : {FrameGuidanceExtent{1,1}, FrameGuidanceExtent{17,11}, FrameGuidanceExtent{64,36}, FrameGuidanceExtent{513,289}}) {
+ 		for (uint32_t percent : {25u, 67u, 100u}) {
+ 			DLSSNRFilter::Impl fixture;
+ 			fixture.device11=resources.GetD3DDevice(); fixture.context11=resources.GetD3DDC(); fixture.device12.copy_from(core.Device());
+@@ -248,8 +249,90 @@
+ 			Check(fixture.device11->CreateUnorderedAccessView(input.get(),nullptr,inputUav.put()));
+ 			Check(fixture.device11->CreateUnorderedAccessView(fixture.sharedOutput11.get(),nullptr,denoisedUav.put()));
+ 			const float original[4]{.4f,.3f,.6f,.43f};
+-			fixture.context11->ClearUnorderedAccessViewFloat(inputUav.get(),original);
++			std::vector<uint8_t> quarterInput;
++			if (extent.width == 64 && percent == 25) {
++				quarterInput.resize(size_t(extent.width) * extent.height * 4);
++				for (uint32_t y = 0; y < extent.height; ++y) {
++					for (uint32_t x = 0; x < extent.width; ++x) {
++						const size_t pixel = (size_t(y) * extent.width + x) * 4;
++						quarterInput[pixel + 0] = static_cast<uint8_t>((x * 13 + y * 7) & 255);
++						quarterInput[pixel + 1] = static_cast<uint8_t>((x * 3 + y * 11) & 255);
++						quarterInput[pixel + 2] = static_cast<uint8_t>((x * 9 + y * 5) & 255);
++						quarterInput[pixel + 3] = 255;
++					}
++				}
++				fixture.context11->UpdateSubresource(input.get(), 0, nullptr,
++					quarterInput.data(), extent.width * 4, 0);
++			} else {
++				fixture.context11->ClearUnorderedAccessViewFloat(inputUav.get(),original);
++			}
+ 			Require(PrepareInput(fixture,input.get()));
++			if (!quarterInput.empty()) {
++				D3D11_TEXTURE2D_DESC reducedDesc{};
++				fixture.sharedInput11->GetDesc(&reducedDesc);
++				reducedDesc.Usage = D3D11_USAGE_STAGING;
++				reducedDesc.BindFlags = 0;
++				reducedDesc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
++				reducedDesc.MiscFlags = 0;
++				winrt::com_ptr<ID3D11Texture2D> reducedReadback;
++				Check(fixture.device11->CreateTexture2D(&reducedDesc, nullptr, reducedReadback.put()));
++				fixture.context11->CopyResource(reducedReadback.get(), fixture.sharedInput11.get());
++				D3D11_MAPPED_SUBRESOURCE reducedMap{};
++				Check(fixture.context11->Map(reducedReadback.get(), 0, D3D11_MAP_READ, 0, &reducedMap));
++				const auto weight = [](double x) {
++					if (std::abs(x) >= 2.0) return 0.0;
++					const auto sinc = [](double value) {
++						return std::abs(value) < 1e-5 ? 1.0 : std::sin(std::numbers::pi * value) / (std::numbers::pi * value);
++					};
++					return sinc(x) * sinc(x * .5);
++				};
++				const uint32_t reducedWidth = extent.width / 4;
++				const uint32_t reducedHeight = extent.height / 4;
++				std::vector<double> vertical(size_t(extent.width) * reducedHeight * 4);
++				for (uint32_t y = 0; y < reducedHeight; ++y) {
++					const double position = (double(y) + .5) * 4.0 - .5;
++					const int first = static_cast<int>(std::ceil(position - 8.0));
++					const int last = static_cast<int>(std::floor(position + 8.0));
++					double weights = 0;
++					for (int sample = first; sample <= last; ++sample)
++						weights += weight((sample - position) * .25);
++					for (uint32_t x = 0; x < extent.width; ++x) {
++						for (uint32_t channel = 0; channel < 4; ++channel) {
++							double total = 0;
++							for (int sample = first; sample <= last; ++sample) {
++								const uint32_t sourceY = static_cast<uint32_t>(std::clamp(sample, 0, int(extent.height) - 1));
++								const size_t sourcePixel = (size_t(sourceY) * extent.width + x) * 4 + channel;
++								total += (quarterInput[sourcePixel] / 255.0) * weight((sample - position) * .25);
++							}
++							vertical[(size_t(y) * extent.width + x) * 4 + channel] = total / weights;
++						}
++					}
++				}
++				for (uint32_t y = 0; y < reducedHeight; ++y) {
++					for (uint32_t x = 0; x < reducedWidth; ++x) {
++						const double sourcePosition = (double(x) + .5) * 4.0 - .5;
++						const int first = static_cast<int>(std::ceil(sourcePosition - 8.0));
++						const int last = static_cast<int>(std::floor(sourcePosition + 8.0));
++						double weights = 0;
++						for (int sample = first; sample <= last; ++sample)
++							weights += weight((sample - sourcePosition) * .25);
++						for (uint32_t channel = 0; channel < 4; ++channel) {
++							double total = 0;
++							for (int sample = first; sample <= last; ++sample) {
++								const uint32_t sourceX = static_cast<uint32_t>(std::clamp(sample, 0, int(extent.width) - 1));
++								total += vertical[(size_t(y) * extent.width + sourceX) * 4 + channel] *
++									weight((sample - sourcePosition) * .25);
++							}
++							const uint8_t actual = static_cast<const uint8_t*>(reducedMap.pData)[
++								size_t(y) * reducedMap.RowPitch + size_t(x) * 4 + channel];
++							Require(std::abs(int(actual) - int(std::lround(total / weights * 255.0))) <= 2);
++						}
++					}
++				}
++				fixture.context11->Unmap(reducedReadback.get(), 0);
++				fixture.context11->ClearUnorderedAccessViewFloat(inputUav.get(), original);
++				Require(PrepareInput(fixture, input.get()));
++			}
+ 			fixture.context11->CopyResource(fixture.sharedOutput11.get(),fixture.sharedInput11.get());
+ 			DLSSNRSettings controls;
+ 			Require(CompositeResidual(fixture,output.get(),fixture.sharedOutputSrv11.get(),controls));

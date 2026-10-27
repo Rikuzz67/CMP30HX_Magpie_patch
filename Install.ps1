@@ -87,7 +87,7 @@ function Find-Core([string]$Target) {
 
 $exitCode = 0
 try {
-    Add-Type -Path (Join-Path $PSScriptRoot 'src/PatchEngine.cs')
+    Add-Type -Path @((Join-Path $PSScriptRoot 'src/PatchEngine.cs'), (Join-Path $PSScriptRoot 'src/PerformancePatch.cs'))
     if (-not $AppDir) {
         $chosen = Pick-File 'Choose Magpie.exe in the extracted community package' 'Magpie executable (Magpie.exe)|Magpie.exe'
         $AppDir = [IO.Path]::GetDirectoryName($chosen)
@@ -97,9 +97,12 @@ try {
     Reject-Reparse $target
     foreach ($name in $KnownNames) { Reject-Reparse (Join-Path $target $name) }
     $exePath = Join-Path $target 'Magpie.exe'; $backup = Join-Path $target $BackupName
+    if (Test-Path -LiteralPath (Join-Path $target '.30hx-performance-backup-v1')) {
+        throw 'This is the separate V2 application package. Use its own restore tools, or install this unified patch into a fresh community release directory.'
+    }
     $versions = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'versions.json') -Raw | ConvertFrom-Json
     $exeHash = Hash-File $exePath
-    $version = @($versions | Where-Object { $_.originalHash -eq $exeHash -or $_.patchedHash -eq $exeHash })
+    $version = @($versions | Where-Object { $_.originalHash -eq $exeHash -or $_.patchedHash -eq $exeHash -or ($_.PSObject.Properties['optimizedHash'] -and $_.optimizedHash -eq $exeHash) })
     if ($Action -eq 'Restore') {
         $state = Load-State $backup
         # Check every destination before restoring any file. Preserve later user changes.
@@ -131,10 +134,16 @@ try {
             }
             if ((Hash-File (Join-Path $target 'nvngx_dlssnr.dll')) -ne $state.modelHash) { throw 'DLSSNR model changed since installation.' }
             Write-Host 'CHECK_OK: installed files match. GPU/application execution still requires testing.' -ForegroundColor Green
-        } else { Write-Host 'CHECK_OK: recognized original executable; compatibility patch not installed.' }
+            if ($version[0].PSObject.Properties['optimizedHash']) {
+                if ($exeHash -eq $version[0].optimizedHash) { Write-Host 'PERFORMANCE_OK: unified optimization installed.' }
+                else { Write-Host 'PERFORMANCE_NOT_INSTALLED: legacy compatibility-only patch; Restore then Install to upgrade.' }
+            }
+        } elseif ($exeHash -eq $version[0].originalHash) {
+            Write-Host 'CHECK_OK: recognized original executable; compatibility patch not installed.'
+        } else { throw 'Patched executable found without its backup state. Installation integrity and automatic restore cannot be verified.' }
     } else {
         $v = $version[0]
-        if ($exeHash -eq $v.patchedHash) { throw 'This executable is already patched. Use Check or Restore.' }
+        if ($exeHash -ne $v.originalHash) { throw 'Already patched. Use Check, or Restore with this installer and then Install to apply the unified update.' }
         if (Test-Path -LiteralPath $backup) { throw 'Backup already exists. Restore the prior installation before installing again.' }
         Test-WritableExe $exePath
         $helperPath = Join-Path $PSScriptRoot '30HXCoreLoader.dll'
@@ -150,6 +159,13 @@ try {
         $originalExe = [IO.File]::ReadAllBytes($exePath)
         $patchedExe = [PatchEngine]::Exe($originalExe,$v.originalHash,[uint32]$v.callRva,[uint32]$v.loadIat,[uint32]$v.procIat)
         if ([PatchEngine]::Hash($patchedExe) -ne $v.patchedHash) { throw 'Patched executable hash mismatch.' }
+        $installedExeHash = $v.patchedHash
+        if ($v.PSObject.Properties['optimizedHash']) {
+            if ((Hash-File $modelPath) -ne $v.performanceModelHash) { throw 'The 0.6.11 unified optimization requires the community 310.9.16 DLSSNR DLL. No target files changed.' }
+            $patchedExe = [PerformancePatch]::Apply($patchedExe, [IO.File]::ReadAllBytes((Join-Path $PSScriptRoot 'src/optimized-downsample.hlsl')))
+            $installedExeHash = $v.optimizedHash
+            if ([PatchEngine]::Hash($patchedExe) -ne $installedExeHash) { throw 'Optimized executable hash mismatch.' }
+        }
         $patchedCore = [PatchEngine]::Core([IO.File]::ReadAllBytes($coreSource))
         $helperBytes = [IO.File]::ReadAllBytes($helperPath)
         $modelHash = Hash-File $modelPath
@@ -159,7 +175,7 @@ try {
             if ([PatchEngine]::Hash($modelBytes) -ne $modelHash) { throw 'DLSSNR source changed while reading.' }
         }
         $changes = @(
-            @{name='Magpie.exe';bytes=$patchedExe;hash=$v.patchedHash},
+            @{name='Magpie.exe';bytes=$patchedExe;hash=$installedExeHash},
             @{name='_nvngx.dll';bytes=$patchedCore;hash=$CorePatched},
             @{name='30HXCoreLoader.dll';bytes=$helperBytes;hash=$v.helperHash}
         )
@@ -209,8 +225,9 @@ try {
             throw $originalFailure
         }
         Write-Host ('INSTALL_OK: ' + $v.version + ' compatibility patch installed.') -ForegroundColor Green
-        Write-Host 'Launch Magpie manually. Add the DLSSNR effect; start with one pass, 25% input dimensions and optical flow off.'
-        Write-Host 'No FPS target or personal config was changed. v0.6.11 still needs your application test.'
+        if ($v.PSObject.Properties['optimizedHash']) { Write-Host 'PERFORMANCE_OK: exact 4:1 downsample fast path and maximum present queue depth 1 integrated.' }
+        Write-Host 'Launch Magpie manually. No FPS target, input scale, style, intensity or personal config was changed.'
+        Write-Host '60 FPS and full DLSS5 equivalence have not been demonstrated. See README for measured limits.'
     }
 } catch {
     $exitCode = 1

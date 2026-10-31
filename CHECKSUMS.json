@@ -11,8 +11,8 @@
   },
   {
     "path": "30HXCoreLoader.dll",
-    "size": 237056,
-    "sha256": "b6d1013ef23eb9ce3378b65f339152e532c8b5cf84aca7d865dfe74bddcfd93c"
+    "size": 671199,
+    "sha256": "a414b35489082e3795984d3fd8d15f70c65892f7da91c69b40c254100df38b04"
   },
   {
     "path": "Check-30HX.cmd",
@@ -31,13 +31,13 @@
   },
   {
     "path": "Install.ps1",
-    "size": 15572,
-    "sha256": "80fd670fe114afd9833592bef2ea1158ad4c6de07b19b13676d5551027046819"
+    "size": 15737,
+    "sha256": "4987f1cf6b618d88eb96e227edbc045c97b7797646e86ddfaa0085c27de4cec9"
   },
   {
     "path": "README.md",
-    "size": 15791,
-    "sha256": "1763e65e8cf5549ecdba2af0097df2108f1cf6dbaf70f941e8de1430a55ce11f"
+    "size": 15994,
+    "sha256": "777c54a4c5ed0b790dd2aa15142ff2c681d2df1bd043791035e86a952d0215da"
   },
   {
     "path": "VALIDATION.json",
@@ -52,12 +52,12 @@
   {
     "path": "versions.json",
     "size": 1831,
-    "sha256": "caab082f3a8eec1f82b835dbace60e2e6a6209c4a46317589a7a681fb74d24d4"
+    "sha256": "b844f951cdca4b3b8d4842083c0f06b31514b958b3ff8f4a11c89bf70494936e"
   },
   {
     "path": "src/PatchEngine.cs",
-    "size": 5849,
-    "sha256": "2c8179a7639f2b233d5b26442b8fa0d0f0b411e4a683ca32f78c21d0dd37980c"
+    "size": 9018,
+    "sha256": "f04747ba0ef15408e3c1cb73b63221f486ed7053b1f371dc859b6b882d681cf7"
   },
   {
     "path": "src/PerformancePatch.cs",
@@ -66,8 +66,8 @@
   },
   {
     "path": "src/pinned_loader.cpp",
-    "size": 2707,
-    "sha256": "c7261064c83b11356acad5af6cbdef629380546d225df690ae7daad03106a9b7"
+    "size": 3001,
+    "sha256": "d40c5b20815244b83d73d8b5340515580791dc31e08b3e62ec4a26ca7ac7e514"
   },
   {
     "path": "src/optimized-downsample.hlsl",
@@ -92,6 +92,6 @@
   {
     "path": "tools/build_release.py",
     "size": 3159,
-    "sha256": "762ab4ffae036eb6e7e297df95c06000bbd8e171dd9bead04045964913eeeaef"
+    "sha256": "063349b9b009d1212a054219248ad99665c8948e421099b8a1ee155906d357e0"
   }
 ]

@@ -34,7 +34,7 @@ def main():
             raise ValueError('Refusing to package a symbolic link: '+name)
         data = path.read_bytes()
         if name.endswith('.dll'):
-            if digest(data) != 'b6d1013ef23eb9ce3378b65f339152e532c8b5cf84aca7d865dfe74bddcfd93c':
+            if digest(data) != 'a414b35489082e3795984d3fd8d15f70c65892f7da91c69b40c254100df38b04':
                 raise ValueError('Loader fingerprint mismatch')
         elif name.endswith('.hlsl'):
             if digest(data) != SHADER_HASH:

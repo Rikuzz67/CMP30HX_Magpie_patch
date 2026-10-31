@@ -31,7 +31,7 @@ The CMP 30HX lacks physical Tensor Cores at the hardware level and has no offici
    * This tool redirects the local NGX load call to the accompanying `30HXCoreLoader.dll` by injecting a new `.hxload` section into `Magpie.exe`.
 3. **Fixed path and SHA256 locking**:
    * The `30HXCoreLoader.dll` uses the Windows BCrypt cryptography API to calculate and strictly verify the SHA256 digest of the local `_nvngx.dll`.
-   * `LoadLibraryExW` is called only when it perfectly matches a known compatible hash, which lifts system signature restrictions and eliminates the injection risk of any unknown DLL.
+   * `LoadLibraryExW` is called only for the executable-local `_nvngx.dll` when it contains at least three signatures emitted by this patcher, which lifts system signature restrictions while rejecting unpatched/unknown cores.
 4. **Pipeline integration and output**:
    * It retains upstream Magpie's existing snippet direct loading logic and module camouflage mechanism, completing Feature 18 creation, Evaluate execution, and GPU Fence synchronized presentation within the D3D12 pipeline.
 
@@ -48,9 +48,10 @@ This tool incorporates strict fingerprint verification, supporting only the know
 
 ### Known File Fingerprints (SHA256)
 
-* **NVIDIA Driver Core** (Verified Driver 616.92):
-  * Original `_nvngx.dll`: `91d3742f0df3f2dd85141fa39ea257f7b9243c3e6755cd7fea894c721e7491aa`
-  * Patched `_nvngx.dll`: `cf36298fb8bdcf46e0e5d2f558f9132f9aff86a95db5ce5ab849fbacb4083702`
+* **NVIDIA Driver Core** (structure validated):
+  * The installer scans the PE code section for the hardware rejection branches and records the actual original/patched SHA256 in its backup manifest.
+  * 616.92 remains supported (`91d374...` -> `cf362...`); 610.88 and newer drivers using the same NGX hardware-check layout are accepted when those checks can be identified safely.
+  * Unknown or ambiguous layouts are rejected before any target file is changed.
 * **Recognized Community Models**:
   * `310.8.2.0`: `6eb209e764f39872625debd6abaf45e2bb6322f6f270f781f70c059ae30b3927`
   * `310.9.16.0`: `a8a237a967469c455a84654932b513ab656fbaa1e0c44504b1e1bf0890f902b8`
@@ -106,7 +107,7 @@ Magpie-30HX-Compat/
 │   ├── optimized-downsample.hlsl # Exact embedded shader resource
 │   ├── 30hx-performance.patch # Source diff against the upstream 0.6.11 commit
 │   ├── LICENSE-Magpie.txt     # Upstream license for the source diff
-│   └── pinned_loader.cpp      # Fixed hash core loading proxy based on Windows BCrypt
+│   └── pinned_loader.cpp      # Structural core loading proxy based on Windows BCrypt
 ├── Install.ps1                # Automated installation and retrieval logic
 ├── versions.json              # Fingerprint manifest for supported EXEs, cores, and models
 ├── CHECKSUMS.json             # Hash manifest for the patch package itself
@@ -168,7 +169,7 @@ Suggested release description:
 ```text
 Supports only the exact SHA256-locked SAOG0721/Magpie community releases 0.6.10 and 0.6.11. This does not support the official Blinue build or unknown recompilations.
 
-0.6.11: One installer now combines 30HX compatibility changes, exact 4:1 Lanczos2 downsample optimization and maximum present queue depth 1. Requires the community 310.9.16 model and the previously validated 616.92 NGX core.
+0.6.11: One installer now combines 30HX compatibility changes, exact 4:1 Lanczos2 downsample optimization and maximum present queue depth 1. Requires the community 310.9.16 model; the NGX core is selected by structure and its generated hash is stored in the manifest.
 0.6.10: Existing compatibility support is retained; the two performance changes are not applied.
 
 New users: Extract the matching community Magpie release and run Install-30HX.cmd from this patch.

@@ -2,6 +2,7 @@
 #include <bcrypt.h>
 #include <string>
 #include <cstdio>
+#include <vector>
 static_assert(sizeof(void*)==8, "x64 required");
 static std::wstring directory(){
  HMODULE self=nullptr; wchar_t path[32768]{};
@@ -21,11 +22,18 @@ extern "C" __declspec(dllexport) HMODULE LoadPinnedCore(const wchar_t* path,DWOR
  HANDLE file=CreateFileW(path,GENERIC_READ,FILE_SHARE_READ,nullptr,OPEN_EXISTING,FILE_ATTRIBUTE_NORMAL,nullptr);
  if(file==INVALID_HANDLE_VALUE)return nullptr;
  BCRYPT_ALG_HANDLE algorithm=nullptr;BCRYPT_HASH_HANDLE hash=nullptr;unsigned char digest[32]{};bool ok=false;
- const unsigned char expected[32]={0xcf,0x36,0x29,0x8f,0xb8,0xbd,0xcf,0x46,0xe0,0xe5,0xd2,0xf5,0x58,0xf9,0x13,0x2f,0x9a,0xff,0x86,0xa9,0x5d,0xb5,0xce,0x5a,0xb8,0x49,0xfb,0xac,0xb4,0x08,0x37,0x02};
  if(BCryptOpenAlgorithmProvider(&algorithm,BCRYPT_SHA256_ALGORITHM,nullptr,0)>=0&&BCryptCreateHash(algorithm,&hash,nullptr,0,nullptr,0,0)>=0){
-  unsigned char buffer[65536];DWORD got=0;bool readOk=true;
-  for(;;){if(!ReadFile(file,buffer,sizeof buffer,&got,nullptr)){readOk=false;break;}if(!got)break;if(BCryptHashData(hash,buffer,got,0)<0){readOk=false;break;}}
-  ok=readOk&&BCryptFinishHash(hash,digest,32,0)>=0&&!memcmp(digest,expected,32);
+  std::vector<unsigned char> all; unsigned char buffer[65536];DWORD got=0;bool readOk=true;
+  for(;;){if(!ReadFile(file,buffer,sizeof buffer,&got,nullptr)){readOk=false;break;}if(!got)break;all.insert(all.end(),buffer,buffer+got);if(BCryptHashData(hash,buffer,got,0)<0){readOk=false;break;}}
+  // Accept a patched NGX core from any driver generation. The patcher emits one
+  // of these two signatures for every hardware rejection branch.
+  int signatures=0;
+  for(size_t i=0;i+8<=all.size();i++){
+   bool legacy=all[i]==0x84&&all[i+1]==0xc0&&all[i+2]==0xe9&&all[i+7]==0x90;
+   bool modern=all[i]==0x84&&all[i+1]==0xc0&&all[i+2]==0x90&&all[i+3]==0x90&&all[i+7]==0x90;
+   if(legacy||modern)signatures++;
+  }
+  ok=readOk&&BCryptFinishHash(hash,digest,32,0)>=0&&signatures>=3;
  }
  if(hash)BCryptDestroyHash(hash);if(algorithm)BCryptCloseAlgorithmProvider(algorithm,0);
  HMODULE result=nullptr;DWORD error=ERROR_INVALID_IMAGE_HASH;

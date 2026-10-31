@@ -8,8 +8,6 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version 2
-$CoreOriginal = '91d3742f0df3f2dd85141fa39ea257f7b9243c3e6755cd7fea894c721e7491aa'
-$CorePatched = 'cf36298fb8bdcf46e0e5d2f558f9132f9aff86a95db5ce5ab849fbacb4083702'
 $KnownNames = @('Magpie.exe','_nvngx.dll','30HXCoreLoader.dll','nvngx_dlssnr.dll')
 $BackupName = '.30hx-compat-backup-v1'
 $SourceModels = @(
@@ -28,6 +26,9 @@ function Pick-File([string]$Title,[string]$Filter) {
     } finally { $dialog.Dispose() }
 }
 function Hash-File([string]$Path) { return [PatchEngine]::FileHash($Path) }
+function Test-CoreCandidate([string]$Path) {
+    try { [void][PatchEngine]::Core([IO.File]::ReadAllBytes($Path)); return $true } catch { return $false }
+}
 function Reject-Reparse([string]$Path) {
     if (Test-Path -LiteralPath $Path) {
         $item = Get-Item -LiteralPath $Path -Force
@@ -65,23 +66,23 @@ function Load-State([string]$Backup) {
 function Find-Core([string]$Target) {
     if ($CoreFile) {
         $candidate = (Resolve-Path -LiteralPath $CoreFile).Path
-        if ((Hash-File $candidate) -ne $CoreOriginal) { throw 'Supplied NGX core does not match the supported driver-core SHA256.' }
+        if (-not (Test-CoreCandidate $candidate)) { throw 'Supplied NGX core is not a supported, structurally patchable driver core.' }
         return $candidate
     }
     $local = Join-Path $Target '_nvngx.dll'
-    if ((Test-Path -LiteralPath $local) -and (Hash-File $local) -eq $CoreOriginal) { return $local }
+    if ((Test-Path -LiteralPath $local) -and (Test-CoreCandidate $local)) { return $local }
     $inputCore = Join-Path $PSScriptRoot 'inputs/_nvngx.dll'
-    if ((Test-Path -LiteralPath $inputCore) -and (Hash-File $inputCore) -eq $CoreOriginal) { return $inputCore }
-    Write-Host 'Looking for a matching installed NVIDIA NGX core (read only)...'
+    if ((Test-Path -LiteralPath $inputCore) -and (Test-CoreCandidate $inputCore)) { return $inputCore }
+    Write-Host 'Looking for a structurally compatible installed NVIDIA NGX core (read only)...'
     $store = Join-Path $env:SystemRoot 'System32/DriverStore/FileRepository'
     foreach ($driver in Get-ChildItem -LiteralPath $store -Directory -Filter 'nv*.inf_*' -ErrorAction SilentlyContinue) {
         foreach ($candidate in @((Join-Path $driver.FullName '_nvngx.dll'),(Join-Path $driver.FullName 'amd64/_nvngx.dll'))) {
-            if ((Test-Path -LiteralPath $candidate) -and (Hash-File $candidate) -eq $CoreOriginal) { return $candidate }
+            if ((Test-Path -LiteralPath $candidate) -and (Test-CoreCandidate $candidate)) { return $candidate }
         }
     }
-    Write-Host 'No matching core found. This patch requires the validated 616.92 core hash.'
-    $selected = Pick-File 'Choose an original matching _nvngx.dll copy' 'NGX core (_nvngx.dll)|_nvngx.dll'
-    if ((Hash-File $selected) -ne $CoreOriginal) { throw 'Unsupported core. Nothing installed. See README for the supported version.' }
+    Write-Host 'No structurally compatible core found. Choose an original _nvngx.dll to validate.'
+    $selected = Pick-File 'Choose an original compatible _nvngx.dll copy' 'NGX core (_nvngx.dll)|_nvngx.dll'
+    if (-not (Test-CoreCandidate $selected)) { throw 'Unsupported core layout. Nothing installed; no target files were changed.' }
     return $selected
 }
 
@@ -166,7 +167,10 @@ try {
             $installedExeHash = $v.optimizedHash
             if ([PatchEngine]::Hash($patchedExe) -ne $installedExeHash) { throw 'Optimized executable hash mismatch.' }
         }
-        $patchedCore = [PatchEngine]::Core([IO.File]::ReadAllBytes($coreSource))
+        $coreOriginalBytes = [IO.File]::ReadAllBytes($coreSource)
+        $coreOriginalHash = [PatchEngine]::Hash($coreOriginalBytes)
+        $patchedCore = [PatchEngine]::Core($coreOriginalBytes)
+        $corePatchedHash = [PatchEngine]::Hash($patchedCore)
         $helperBytes = [IO.File]::ReadAllBytes($helperPath)
         $modelHash = Hash-File $modelPath
         $modelBytes = $null
@@ -176,7 +180,7 @@ try {
         }
         $changes = @(
             @{name='Magpie.exe';bytes=$patchedExe;hash=$installedExeHash},
-            @{name='_nvngx.dll';bytes=$patchedCore;hash=$CorePatched},
+            @{name='_nvngx.dll';bytes=$patchedCore;hash=$corePatchedHash},
             @{name='30HXCoreLoader.dll';bytes=$helperBytes;hash=$v.helperHash}
         )
         if ($null -ne $modelBytes) { $changes += @{name='nvngx_dlssnr.dll';bytes=$modelBytes;hash=$modelHash} }
